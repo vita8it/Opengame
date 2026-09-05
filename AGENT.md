@@ -7,10 +7,25 @@
 * [Roblox Scripting Documentation](https://create.roblox.com/docs/scripting)
 * [Project Real Executor Documentation](https://projectreal.gg/th/docs/)
 * [Framework — `utils/package.luau`](https://github.com/vita8it/Opengame/blob/main/utils/package.luau)
+* [Icon — `Components/Lucide.lua`](https://github.com/vita8it/Turbopack/blob/main/Components/Lucide.lua)
 
 ---
 
 # ตัวอย่างการใช้งาน Framework
+
+แยกเป็น Block ให้ชัดเจน โดยใช้ `do ... end` เปิดและปิด Block
+
+- **UI** อยู่ส่วน UI
+- **Queue** อยู่ส่วน Queue
+- **Module** อยู่ส่วน Module
+
+เมื่อจะสร้างฟังก์ชันให้ใช้รูปแบบ `Module:FunctionName`
+
+เมื่อจะ Connect อะไรก็ตามให้ใช้:
+
+```lua
+Connect(Signal, Action)
+```
 
 Framework หลักถูกโหลดจาก `package.luau` และคืนค่า `Module` กับ `Settings`
 
@@ -21,6 +36,8 @@ local Module, Settings = loadstring(game:HttpGet(
 ```
 
 > `package.luau` ใน source ปัจจุบันกำหนด `Repository = "Next.js"` สำหรับระบบ `Import()` ดังนั้น `Module:Import()` จะโหลดไฟล์จาก repository `vita8it/Next.js`
+
+---
 
 ## Module
 
@@ -122,7 +139,7 @@ Settings.Enabled = true
 
 Queue ทำงานในรูปแบบ **Layer จากด้านบนลงด้านล่าง**
 
-```text
+```
 Layer 1
    ↓
 Layer 2
@@ -170,7 +187,7 @@ end)
 
 ลำดับการทำงาน:
 
-```text
+```
 Layer 1
   │
   ├── return true ──> STOP
@@ -212,7 +229,7 @@ end)
 
 ลำดับ:
 
-```text
+```
 Collect Chest
      │
      ├── เจอกล่อง → Collect → STOP
@@ -246,7 +263,7 @@ end, 0.1)
 
 Option นี้จะถูกจัดเป็น **Thread** แทน Queue Layer
 
-```text
+```
 CreateOption()
 │
 ├── ไม่มี Interval
@@ -272,12 +289,12 @@ Thread จะทำงานตาม Interval ที่กำหนด
 
 # Queue vs Thread
 
-| รูปแบบ                             | ประเภท   | การทำงาน               |
-| ---------------------------------- | -------- | ---------------------- |
-| `CreateOption("A", Function)`      | Queue    | Layer บน → ล่าง        |
-| `CreateOption("A", Function, 0.1)` | Thread   | ทำงานตาม Interval      |
-| Queue Layer `return true`          | Stop     | หยุดที่ Layer ปัจจุบัน |
-| Queue Layer ไม่ `return true`      | Continue | ไป Layer ถัดไป         |
+| รูปแบบ | ประเภท | การทำงาน |
+| --- | --- | --- |
+| `CreateOption("A", Function)` | Queue | Layer บน → ล่าง |
+| `CreateOption("A", Function, 0.1)` | Thread | ทำงานตาม Interval |
+| Queue Layer `return true` | Stop | หยุดที่ Layer ปัจจุบัน |
+| Queue Layer ไม่ `return true` | Continue | ไป Layer ถัดไป |
 
 ---
 
@@ -291,7 +308,7 @@ Queue:StartQueue()
 
 Queue จะตรวจสอบ Layer ตามลำดับที่ถูกสร้างไว้
 
-```text
+```
 StartQueue
     ↓
 Layer 1
@@ -493,7 +510,7 @@ Plugins:Toggle(
 
 เมื่อเปิด Toggle:
 
-```text
+```
 Toggle
   ↓
 Enabled
@@ -505,7 +522,7 @@ Thread เริ่มทำงาน
 
 เมื่อปิด Toggle:
 
-```text
+```
 Toggle
   ↓
 Disabled
@@ -536,7 +553,7 @@ Plugins:Slider(
 
 รูปแบบ:
 
-```text
+```
 Values = {
     Minimum,
     Maximum,
@@ -685,7 +702,7 @@ Queue:StartQueue()
 
 ในตัวอย่างนี้:
 
-```text
+```
 Collect Chest
       ↓
 Kill Enemy
@@ -697,7 +714,7 @@ Move To Farm
 
 ส่วน:
 
-```text
+```
 Auto Farm + 0.1
 ```
 
@@ -731,7 +748,7 @@ local CombatManager = {}
 
 ---
 
-# 2. Module Function ต้องใช้ Method
+## 2. Module Function ต้องใช้ Method
 
 Function ที่เป็น Logic ของ Module ต้องประกาศเป็น Method:
 
@@ -757,7 +774,7 @@ end
 
 ---
 
-# 3. Boolean Function ต้องขึ้นต้นด้วย Is
+## 3. Boolean Function ต้องขึ้นต้นด้วย Is
 
 Function ที่คืนค่า Boolean ต้องใช้ `Is`
 
@@ -779,22 +796,22 @@ IsAvailable()
 
 ---
 
-# 4. Prefix ของ Function
+## 4. Prefix ของ Function
 
-| Prefix   | ความหมาย                    |
-| -------- | --------------------------- |
-| `Is`     | ตรวจสอบ Boolean             |
-| `Get`    | ดึงค่าหรือ Object ที่มีอยู่ |
-| `Find`   | ค้นหาและคืนผลลัพธ์          |
-| `Create` | สร้าง Object                |
-| `Set`    | กำหนดค่า                    |
-| `Update` | อัปเดต State                |
-| `Remove` | ลบ Object                   |
-| `Clear`  | ล้างข้อมูล                  |
+| Prefix | ความหมาย |
+| --- | --- |
+| `Is` | ตรวจสอบ Boolean |
+| `Get` | ดึงค่าหรือ Object ที่มีอยู่ |
+| `Find` | ค้นหาและคืนผลลัพธ์ |
+| `Create` | สร้าง Object |
+| `Set` | กำหนดค่า |
+| `Update` | อัปเดต State |
+| `Remove` | ลบ Object |
+| `Clear` | ล้างข้อมูล |
 
 ---
 
-# 5. ห้ามใช้ pairs / ipairs
+## 5. ห้ามใช้ pairs / ipairs
 
 ใช้ Generalized Iteration
 
@@ -821,7 +838,7 @@ end
 
 ---
 
-# 6. เว้นวรรคใน Table Index
+## 6. เว้นวรรคใน Table Index
 
 ใช้:
 
@@ -841,7 +858,7 @@ Settings[Flag]
 
 ---
 
-# 7. Cache
+## 7. Cache
 
 ตัวแปร Cache ต้องใช้ชื่อ `Cached`
 
@@ -865,7 +882,7 @@ Cached[ Player ] = Character
 
 ---
 
-# 8. Cache ไม่ใช่ Source of Truth
+## 8. Cache ไม่ใช่ Source of Truth
 
 Cache มีไว้เพิ่มความเร็วเท่านั้น
 
@@ -887,7 +904,7 @@ end
 
 หลักการ:
 
-```text
+```
 Cache
   ↓
 Validate
@@ -899,7 +916,7 @@ Valid?
 
 ---
 
-# 9. Early Return
+## 9. Early Return
 
 ควรใช้ Early Return เพื่อลด Nested Condition
 
@@ -935,7 +952,7 @@ Attack()
 
 ---
 
-# 10. หลีกเลี่ยงงานซ้ำ
+## 10. หลีกเลี่ยงงานซ้ำ
 
 ไม่ควรเรียก API เดิมหลายครั้งโดยไม่จำเป็น
 
@@ -954,7 +971,7 @@ local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
 
 หลักการ:
 
-```text
+```
 Get ครั้งเดียว
     ↓
 เก็บไว้ใน Variable
@@ -964,7 +981,7 @@ Get ครั้งเดียว
 
 ---
 
-# 11. Function ต้องมี Responsibility เดียว
+## 11. Function ต้องมี Responsibility เดียว
 
 หนึ่ง Function ควรมีหน้าที่หลักเพียงอย่างเดียว
 
@@ -1001,7 +1018,7 @@ end
 
 ---
 
-# 12. ใช้ self สำหรับ Module State
+## 12. ใช้ self สำหรับ Module State
 
 ถ้า State เป็นของ Module ให้ใช้ `self`
 
@@ -1025,7 +1042,7 @@ return Manager
 
 ---
 
-# 13. อ่านง่ายสำคัญกว่าสั้น
+## 13. อ่านง่ายสำคัญกว่าสั้น
 
 อย่าทำ Code ให้สั้นจนอ่านยาก
 
@@ -1047,7 +1064,7 @@ end
 
 ---
 
-# 14. Consistency
+## 14. Consistency
 
 Code ใน Project เดียวกันต้องใช้รูปแบบเดียวกัน
 
@@ -1067,20 +1084,20 @@ local humanoid = ...
 
 ---
 
-# 15. การแก้ไข Code เดิม
+## 15. การแก้ไข Code เดิม
 
 เมื่อแก้ Code ที่มีอยู่แล้ว:
 
-* Preserve Logic เดิม
-* Preserve Architecture เดิม
-* แก้เฉพาะส่วนที่จำเป็น
-* ไม่สร้างระบบใหม่โดยไม่ได้ขอ
-* ไม่เปลี่ยนชื่อสิ่งต่าง ๆ โดยไม่มีเหตุผล
-* ไม่ Refactor ขนาดใหญ่ถ้าไม่ได้ร้องขอ
+- Preserve Logic เดิม
+- Preserve Architecture เดิม
+- แก้เฉพาะส่วนที่จำเป็น
+- ไม่สร้างระบบใหม่โดยไม่ได้ขอ
+- ไม่เปลี่ยนชื่อสิ่งต่าง ๆ โดยไม่มีเหตุผล
+- ไม่ Refactor ขนาดใหญ่ถ้าไม่ได้ร้องขอ
 
 ---
 
-# 16. Queue Layer ต้องเรียงตาม Priority
+## 16. Queue Layer ต้องเรียงตาม Priority
 
 สำหรับระบบ Farm ให้เรียง Layer จาก **สำคัญที่สุด → สำคัญน้อยที่สุด**
 
@@ -1108,7 +1125,7 @@ end)
 
 ลำดับ:
 
-```text
+```
 Emergency
     ↓
 Collect
@@ -1118,7 +1135,7 @@ Farm
 
 ถ้า `Emergency` ทำงานสำเร็จและ `return true`:
 
-```text
+```
 Emergency
    ↓
 return true
@@ -1130,7 +1147,7 @@ STOP
 
 ---
 
-# 17. Queue ไม่ควรใช้ Interval
+## 17. Queue ไม่ควรใช้ Interval
 
 ถ้าต้องการสร้าง Layer:
 
@@ -1150,7 +1167,7 @@ end, 0.1)
 
 เพราะแบบหลังเป็น Thread
 
-```text
+```
 ไม่มี Interval
     ↓
 Queue Layer
@@ -1162,7 +1179,7 @@ Thread
 
 ---
 
-# 18. Summary Convention
+## 18. Summary Convention
 
 เมื่อสรุป Code หรืออธิบายระบบ ให้เน้น:
 
@@ -1174,7 +1191,7 @@ Thread
 
 ตัวอย่าง:
 
-```text
+```
 GoodQueue
 
 1. CreateOption ไม่มี Interval = Queue Layer
@@ -1191,23 +1208,23 @@ GoodQueue
 
 Code ที่ดีใน Project นี้ต้อง:
 
-* อ่านง่าย
-* Consistent
-* ใช้ Naming ที่ชัดเจน
-* ใช้ PascalCase
-* ใช้ `Is` สำหรับ Boolean
-* ใช้ Prefix ให้ตรงกับหน้าที่
-* ไม่ใช้ `pairs()` / `ipairs()`
-* เว้นวรรคใน Table Index
-* ใช้ Cache อย่างถูกต้อง
-* Validate Cache ก่อนใช้
-* ใช้ Early Return
-* หลีกเลี่ยงงานซ้ำ
-* แยก Responsibility ของ Function
-* ใช้ `self` สำหรับ Module State
-* Preserve Architecture เดิม
-* ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
-* ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
+- อ่านง่าย
+- Consistent
+- ใช้ Naming ที่ชัดเจน
+- ใช้ PascalCase
+- ใช้ `Is` สำหรับ Boolean
+- ใช้ Prefix ให้ตรงกับหน้าที่
+- ไม่ใช้ `pairs()` / `ipairs()`
+- เว้นวรรคใน Table Index
+- ใช้ Cache อย่างถูกต้อง
+- Validate Cache ก่อนใช้
+- ใช้ Early Return
+- หลีกเลี่ยงงานซ้ำ
+- แยก Responsibility ของ Function
+- ใช้ `self` สำหรับ Module State
+- Preserve Architecture เดิม
+- ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
+- ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
 
 สำหรับระบบ Farm:
 
