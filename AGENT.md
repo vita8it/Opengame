@@ -21,7 +21,7 @@
 
 เมื่อจะสร้างฟังก์ชันให้ใช้รูปแบบ `Module:FunctionName`
 
-เมื่อจะ Connect อะไรก็ตามให้ใช้ Connect จาก Framework:
+เมื่อจะ Connect อะไรก็ตามให้ใช้:
 
 ```lua
 Connect(Signal, Action)
@@ -43,7 +43,7 @@ local Module, Settings = loadstring(game:HttpGet(
 
 ### CreateModule
 
-ใช้สำหรับสร้าง Module ใหม่และเก็บไว้ใน `Module` (บังคับใช้กับทุกสคริปต์)
+ใช้สำหรับสร้าง Module ใหม่และเก็บไว้ใน `Module`
 
 ```lua
 Module:CreateModule("Example", function(Module)
@@ -1204,6 +1204,43 @@ GoodQueue
 
 ---
 
+## 19. ลด Path ซ้ำใน require()
+
+ถ้ามี `require()` หลายตัวที่ใช้ Path เดิมซ้ำกัน ให้สร้าง Reference ไว้ก่อน
+
+ไม่ควร:
+
+```lua
+local PlaceUtil = require(ReplicatedStorage.Shared.Universe.Place.PlaceUtil)
+local GameModes = require(ReplicatedStorage.Shared.Universe.GameMode.GameModes)
+local Remotes = require(ReplicatedStorage.Shared.Universe.Remotes)
+```
+
+ควร:
+
+```lua
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Universe = Shared:WaitForChild("Universe")
+
+local PlaceUtil = require(Universe.Place.PlaceUtil)
+local GameModes = require(Universe.GameMode.GameModes)
+local Remotes = require(Universe.Remotes)
+```
+
+หลักการ:
+
+```
+Path ที่ซ้ำกัน
+    ↓
+ตัด Path ส่วนที่ซ้ำออกมาเป็น Variable
+    ↓
+require() จาก Variable แทน
+```
+
+> ใช้ `WaitForChild()` เสมอเพื่อป้องกัน Race Condition ในฝั่ง Client
+
+---
+
 # Final Principle
 
 Code ที่ดีใน Project นี้ต้อง:
@@ -1225,6 +1262,7 @@ Code ที่ดีใน Project นี้ต้อง:
 - Preserve Architecture เดิม
 - ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
 - ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
+- ลด Path ซ้ำใน `require()` ด้วย `WaitForChild()`
 
 สำหรับระบบ Farm:
 
