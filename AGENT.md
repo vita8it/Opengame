@@ -2,7 +2,7 @@
 
 เอกสารนี้เป็นมาตรฐานสำหรับการเขียนโค้ด **Luau / Roblox** ภายในโปรเจกต์
 
-## References ห้ามลืม
+## References
 
 * [Roblox Scripting Documentation](https://create.roblox.com/docs/scripting)
 * [Project Real Executor Documentation](https://projectreal.gg/th/docs/)
@@ -13,11 +13,11 @@
 
 # ตัวอย่างการใช้งาน Framework
 
-แยกเป็น Block ให้ชัดเจน โดยใช้ `do ... end` เปิดและปิด Block
+แยกเป็น Block ให้ชัดเจน โดยใช้ `do ... end` เปิดและปิด Block ยกเว้น Module
 
 - **UI** อยู่ส่วน UI
 - **Queue** อยู่ส่วน Queue
-- **Module** อยู่ส่วน Module
+- **Module** อยู่ส่วน Module 
 
 เมื่อจะสร้างฟังก์ชันให้ใช้รูปแบบ `Module:FunctionName`
 
@@ -452,32 +452,24 @@ Plugins:Paragraph(
 ## Button
 
 ```lua
-Plugins:Button(
-    Section,
-    {
-        "Test",
-        "Run Example"
-    },
-    function()
-        print("Clicked")
-    end
-)
+Plugins:Button(Section, {
+    "Test",
+    "Run Example"
+}, function()
+    print("Clicked")
+end)
 ```
 
 สามารถกำหนด Type:
 
 ```lua
-Plugins:Button(
-    Section,
-    {
-        "Test",
-        "Run Example",
-        "Primary"
-    },
-    function()
-        print("Running")
-    end
-)
+Plugins:Button(Section, {
+    "Test",
+    "Run Example",
+    "Primary"
+}, function()
+    print("Running")
+end)
 ```
 
 ## Toggle
@@ -495,17 +487,12 @@ end, 0.1)
 จากนั้นสร้าง Toggle โดยใช้ Flag เดียวกัน:
 
 ```lua
-Plugins:Toggle(
-    Section,
-    {
-        "Auto Farm",
-        "Automatically farm"
-    },
+Plugins:Toggle(Section, {
     "Auto Farm",
-    function(Value)
-        print(Value)
-    end
-)
+    "Automatically farm"
+}, "Auto Farm", function(Value)
+    print(Value)
+end)
 ```
 
 เมื่อเปิด Toggle:
@@ -533,22 +520,12 @@ Thread ถูกหยุด
 ## Slider
 
 ```lua
-Plugins:Slider(
-    Section,
-    {
-        "Distance",
-        "Set distance"
-    },
-    {
-        1,
-        100,
-        1
-    },
+Plugins:Slider(Section, {
     "Distance",
-    function(Value)
-        print(Value)
-    end
-)
+    "Set distance"
+}, { 1, 100, 1 }, "Distance", function(Value)
+    print(Value)
+end)
 ```
 
 รูปแบบ:
@@ -564,72 +541,53 @@ Values = {
 ## Dropdown
 
 ```lua
-Plugins:Dropdown(
-    Section,
-    "Select Mode",
-    {
-        "Mode 1",
-        "Mode 2",
-        "Mode 3"
-    },
-    "Mode",
-    function(Value)
-        print(Value)
-    end
-)
+Plugins:Dropdown(Section, "Select Mode", {
+    "Mode 1",
+    "Mode 2",
+    "Mode 3"
+}, "Mode", function(Value)
+    print(Value)
+end)
 ```
 
 ## Textbox
 
 ```lua
-Plugins:Textbox(
-    Section,
-    {
-        "Username",
-        "Enter username"
-    },
+Plugins:Textbox(Section, {
     "Username",
-    function(Value)
-        print(Value)
-    end
-)
+    "Enter username"
+}, "Username", function(Value)
+    print(Value)
+end)
 ```
 
 ## Notify
 
 ```lua
-Plugins:Notify(
-    {
-        "Success",
-        "Action completed"
-    }
-)
+Plugins:Notify({
+    "Success",
+    "Action completed"
+})
 ```
 
 กำหนด Duration:
 
 ```lua
-Plugins:Notify(
-    {
-        "Success",
-        "Action completed"
-    },
-    5
-)
+Plugins:Notify({
+    "Success",
+    "Action completed"
+}, 5)
 ```
 
 ## Dialog
 
 ```lua
-Plugins:Dialog(
-    {
-        "Confirmation",
-        "Are you sure?"
-    },
-    function()
-        print("Confirmed")
-    end
-)
+Plugins:Dialog({
+    "Confirmation",
+    "Are you sure?"
+}, function()
+    print("Confirmed")
+end)
 ```
 
 ---
@@ -683,17 +641,12 @@ Tab:Section("Farm", function(Section)
         AutoFarm()
     end, 0.1)
 
-    Plugins:Toggle(
-        Section,
-        {
-            "Auto Farm",
-            "Enable Auto Farm"
-        },
+    Plugins:Toggle(Section, {
         "Auto Farm",
-        function(Value)
-            print("Auto Farm:", Value)
-        end
-    )
+        "Enable Auto Farm"
+    }, "Auto Farm", function(Value)
+        print("Auto Farm:", Value)
+    end)
 
 end)
 
@@ -1241,7 +1194,70 @@ require() จาก Variable แทน
 
 ---
 
-## 20. ห้ามใช้ local function นอก CreateModule
+## 20. รูปแบบการเขียน UI Element
+
+การเรียก `Plugins:` ทุกตัวต้องใช้รูปแบบนี้เท่านั้น
+
+`Section` และ argument ตัวแรกอยู่บนบรรทัดเดียวกับ function call
+
+Table เปิดบน call บรรทัดเดียวกัน เนื้อหาแยกบรรทัด ปิด `}` ชิดซ้าย
+
+argument ที่เหลือและ `function` ต่อหลัง `}` ทันที
+
+ตัวอย่าง Toggle:
+
+```lua
+Plugins:Toggle(Section, {
+    "Auto Create Party",
+    "Walk into the party zone and create the party automatically"
+}, "AutoCreateParty", function(Value)
+    Queue.Enableds["Enter Party Zone"] = Value
+    Queue.Enableds["Create Party"] = Value
+end)
+```
+
+ตัวอย่าง Slider:
+
+```lua
+Plugins:Slider(Section, {
+    "Distance",
+    "Set distance"
+}, { 1, 100, 1 }, "Distance", function(Value)
+    print(Value)
+end)
+```
+
+ตัวอย่าง Dropdown:
+
+```lua
+Plugins:Dropdown(Section, "Select Mode", {
+    "Mode 1",
+    "Mode 2",
+    "Mode 3"
+}, "Mode", function(Value)
+    print(Value)
+end)
+```
+
+ไม่ควร:
+
+```lua
+Plugins:Toggle(
+    Section,
+    {
+        "Auto Farm",
+        "Enable"
+    },
+    "AutoFarm",
+    function(Value)
+        print(Value)
+    end
+)
+```
+
+---
+
+## 21. ห้ามใช้ local function นอก CreateModule
 
 `local function` ทุกตัวต้องอยู่ภายใน `CreateModule` เท่านั้น
 
@@ -1434,6 +1450,7 @@ Code ที่ดีใน Project นี้ต้อง:
 - ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
 - ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
 - ลด Path ซ้ำใน `require()` ด้วย `WaitForChild()`
+- ใช้รูปแบบ Element format ที่กำหนดเท่านั้น
 - ห้ามใช้ `local function` นอก `CreateModule`
 - เรียก `_ENV` บนสุดทุกสคริปต์
 - ห้ามเขียน Comment
