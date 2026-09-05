@@ -43,7 +43,7 @@ local Module, Settings = loadstring(game:HttpGet(
 
 ### CreateModule
 
-ใช้สำหรับสร้าง Module ใหม่และเก็บไว้ใน `Module`
+ใช้สำหรับสร้าง Module ใหม่และเก็บไว้ใน `Module` (บังคับใช้กับทุกสคริปต์)
 
 ```lua
 Module:CreateModule("Example", function(Module)
