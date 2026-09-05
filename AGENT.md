@@ -1,520 +1,945 @@
-# กฎการเขียนโค้ด — Luau Roblox
+# Luau Roblox Coding Style Guide
 
-เอกสารนี้กำหนดรูปแบบและแนวทางการเขียนโค้ดสำหรับโปรเจกต์ **Roblox Luau**
+เอกสารนี้เป็นมาตรฐานสำหรับการเขียนโค้ด **Luau / Roblox** ภายในโปรเจกต์
 
-จุดประสงค์หลักคือให้โค้ดมีความ **อ่านง่าย, เป็นระบบ, สม่ำเสมอ, ดูแลรักษาง่าย และมีประสิทธิภาพ** โดยไม่ลดความสามารถของโค้ดโดยไม่จำเป็น
-
----
-
-## เอกสารอ้างอิง
+## References
 
 * [Roblox Scripting Documentation](https://create.roblox.com/docs/scripting)
 * [Project Real Executor Documentation](https://projectreal.gg/th/docs/)
+* [Framework — `utils/package.luau`](https://github.com/vita8it/Opengame/blob/main/utils/package.luau)
+
+---
+
+# ตัวอย่างการใช้งาน Framework
+
+Framework หลักถูกโหลดจาก `package.luau` และคืนค่า `Module` กับ `Settings`
+
+```lua
+local Module, Settings = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/vita8it/Opengame/main/utils/package.luau"
+))()
+```
+
+> `package.luau` ใน source ปัจจุบันกำหนด `Repository = "Next.js"` สำหรับระบบ `Import()` ดังนั้น `Module:Import()` จะโหลดไฟล์จาก repository `vita8it/Next.js`
+
+## Module
+
+### CreateModule
+
+ใช้สำหรับสร้าง Module ใหม่และเก็บไว้ใน `Module`
+
+```lua
+Module:CreateModule("Example", function(Module)
+    local Example = {}
+
+    function Example:GetValue()
+        return true
+    end
+
+    return Example
+end)
+```
+
+จากนั้นสามารถเข้าถึง Module ได้ผ่าน:
+
+```lua
+local Example = Module.Example
+```
+
+### Import
+
+ใช้สำหรับโหลด Module จาก Repository ที่ Framework กำหนดไว้
+
+```lua
+local Library = Module:Import("Utils/Library")()
+```
+
+`Import()` จะคืนค่า `loadstring` ที่สามารถเรียกใช้เพื่อสร้าง Module หรือ Object ได้
+
+---
+
+# Connections
+
+Framework มี `Connections` สำหรับจัดการ `RBXScriptConnection`
+
+```lua
+local Connections = Module.Connections
+
+Connections.Connect(
+    game:GetService("RunService").Heartbeat,
+    function()
+        print("Running")
+    end
+)
+```
+
+> `Connections.Connect()` เป็น function แบบ `.` ไม่ใช่ `:`
+
+---
+
+# Configurations
+
+ใช้สำหรับจัดการ Settings และบันทึก Configuration ลงไฟล์
+
+```lua
+local Configurations = Module.Configurations
+local Configurable = Configurations:Create("Example")
+```
+
+กำหนดค่าเริ่มต้น:
+
+```lua
+Configurable:SetDefault("Enabled", false)
+```
+
+โหลด Configuration:
+
+```lua
+Configurable:Load()
+```
+
+บันทึกค่า:
+
+```lua
+Configurable:Save("Enabled", true)
+```
+
+## Settings
+
+เมื่อสร้าง Configuration แล้ว Framework จะสร้าง `Settings` ให้ใช้งาน
+
+```lua
+Settings.Enabled = true
+```
+
+การเปลี่ยนค่าใน `Settings` จะถูกบันทึกลง Configuration โดยอัตโนมัติ
+
+---
+
+# GoodQueue
+
+`GoodQueue` เป็นระบบสำหรับจัดลำดับการทำงานของระบบ Farm
+
+Queue ทำงานในรูปแบบ **Layer จากด้านบนลงด้านล่าง**
+
+```text
+Layer 1
+   ↓
+Layer 2
+   ↓
+Layer 3
+   ↓
+Layer 4
+```
+
+แต่ละ Layer จะถูกตรวจสอบตามลำดับ
+
+ถ้า Layer ใด `return true` ระบบจะ **หยุด Queue ที่ Layer นั้นทันที**
+
+ดังนั้น Layer ด้านบนจะมี Priority สูงกว่า Layer ด้านล่าง
+
+## Queue
+
+การสร้าง Queue ต้องใช้ `CreateOption()` โดย **ไม่ใส่ Interval**
+
+```lua
+Queue:CreateOption("Layer 1", function()
+    if IsSomething() then
+        return true
+    end
+end)
+```
+
+Layer ถัดไป:
+
+```lua
+Queue:CreateOption("Layer 2", function()
+    if IsSomethingElse() then
+        return true
+    end
+end)
+```
+
+และ Layer ถัดไป:
+
+```lua
+Queue:CreateOption("Layer 3", function()
+    print("Layer 3")
+end)
+```
+
+ลำดับการทำงาน:
+
+```text
+Layer 1
+  │
+  ├── return true ──> STOP
+  │
+  └── ไม่ return true
+          ↓
+Layer 2
+  │
+  ├── return true ──> STOP
+  │
+  └── ไม่ return true
+          ↓
+Layer 3
+```
+
+## Queue Example
+
+```lua
+Queue:CreateOption("Collect Chest", function()
+    if IsChestAvailable() then
+        CollectChest()
+
+        return true
+    end
+end)
+
+Queue:CreateOption("Kill Enemy", function()
+    if IsEnemyAvailable() then
+        KillEnemy()
+
+        return true
+    end
+end)
+
+Queue:CreateOption("Move To Farm", function()
+    MoveToFarm()
+end)
+```
+
+ลำดับ:
+
+```text
+Collect Chest
+     │
+     ├── เจอกล่อง → Collect → STOP
+     │
+     └── ไม่เจอ
+          ↓
+     Kill Enemy
+          │
+          ├── เจอ Enemy → Kill → STOP
+          │
+          └── ไม่เจอ
+               ↓
+          Move To Farm
+```
+
+---
+
+# Interval Thread
+
+ถ้า `CreateOption()` มีตัวเลข `Interval` อยู่ท้ายสุด จะ **ไม่ใช่ Queue**
+
+ตัวอย่าง:
+
+```lua
+Queue:CreateOption("Example", function()
+    print("Example is running")
+end, 0.1)
+```
+
+`0.1` คือ Interval
+
+Option นี้จะถูกจัดเป็น **Thread** แทน Queue Layer
+
+```text
+CreateOption()
+│
+├── ไม่มี Interval
+│      ↓
+│    Queue Layer
+│
+└── มี Interval
+       ↓
+     Thread
+```
+
+ตัวอย่าง:
+
+```lua
+Queue:CreateOption("Auto Collect", function()
+    CollectItems()
+end, 0.1)
+```
+
+Thread จะทำงานตาม Interval ที่กำหนด
+
+---
+
+# Queue vs Thread
+
+| รูปแบบ                             | ประเภท   | การทำงาน               |
+| ---------------------------------- | -------- | ---------------------- |
+| `CreateOption("A", Function)`      | Queue    | Layer บน → ล่าง        |
+| `CreateOption("A", Function, 0.1)` | Thread   | ทำงานตาม Interval      |
+| Queue Layer `return true`          | Stop     | หยุดที่ Layer ปัจจุบัน |
+| Queue Layer ไม่ `return true`      | Continue | ไป Layer ถัดไป         |
+
+---
+
+# StartQueue
+
+ใช้สำหรับเริ่มระบบ Queue:
+
+```lua
+Queue:StartQueue()
+```
+
+Queue จะตรวจสอบ Layer ตามลำดับที่ถูกสร้างไว้
+
+```text
+StartQueue
+    ↓
+Layer 1
+    ↓
+Layer 2
+    ↓
+Layer 3
+    ↓
+...
+```
+
+---
+
+# EachOthers
+
+`EachOthers` เป็น Module สำหรับระบบ Server และ Optimization
+
+```lua
+local EachOthers = Module.EachOthers
+```
+
+## JoinServer
+
+```lua
+EachOthers:JoinServer(JobId)
+```
+
+## GetServers
+
+```lua
+local Servers = EachOthers:GetServers(Cursor)
+```
+
+## RejoinServer
+
+```lua
+EachOthers:RejoinServer()
+```
+
+## ChangeServer
+
+```lua
+EachOthers:ChangeServer()
+```
+
+## Set3DEnabled
+
+```lua
+EachOthers:Set3DEnabled(Value)
+```
+
+## SetLowGraphics
+
+```lua
+EachOthers:SetLowGraphics()
+```
+
+---
+
+# Plugins
+
+`Plugins` เป็น Layer สำหรับสร้าง UI และเชื่อม UI เข้ากับระบบ Queue / Settings
+
+```lua
+local Plugins = Module.Plugins
+```
+
+## Window
+
+```lua
+local Queue = Module.GoodQueue:Create()
+
+local Window = Plugins:Window(
+    Queue,
+    {
+        "Example",
+        "Made by vita8it"
+    }
+)
+```
+
+สามารถกำหนด:
+
+```lua
+Plugins:Window(
+    Queue,
+    {
+        "Title",
+        "Footer",
+        Logo
+    }
+)
+```
+
+## CreateTab
+
+```lua
+local Tab = Plugins:CreateTab({
+    "Main",
+    "Main Features"
+})
+```
+
+## Section
+
+```lua
+Tab:Section("Farm", function(Section)
+    -- UI
+end)
+```
+
+## Paragraph
+
+```lua
+Plugins:Paragraph(
+    Section,
+    {
+        "Title",
+        "Description"
+    }
+)
+```
+
+สามารถกำหนด Type:
+
+```lua
+Plugins:Paragraph(
+    Section,
+    {
+        "Title",
+        "Description"
+    },
+    {
+        "Icon",
+        "Text",
+        "Status"
+    }
+)
+```
+
+## Button
+
+```lua
+Plugins:Button(
+    Section,
+    {
+        "Test",
+        "Run Example"
+    },
+    function()
+        print("Clicked")
+    end
+)
+```
+
+สามารถกำหนด Type:
+
+```lua
+Plugins:Button(
+    Section,
+    {
+        "Test",
+        "Run Example",
+        "Primary"
+    },
+    function()
+        print("Running")
+    end
+)
+```
+
+## Toggle
+
+Toggle สามารถใช้ร่วมกับ Thread ที่สร้างด้วย `CreateOption(..., Interval)`
+
+สร้าง Thread:
+
+```lua
+Queue:CreateOption("Auto Farm", function()
+    print("Farming")
+end, 0.1)
+```
+
+จากนั้นสร้าง Toggle โดยใช้ Flag เดียวกัน:
+
+```lua
+Plugins:Toggle(
+    Section,
+    {
+        "Auto Farm",
+        "Automatically farm"
+    },
+    "Auto Farm",
+    function(Value)
+        print(Value)
+    end
+)
+```
+
+เมื่อเปิด Toggle:
+
+```text
+Toggle
+  ↓
+Enabled
+  ↓
+Queue.Threads["Auto Farm"]
+  ↓
+Thread เริ่มทำงาน
+```
+
+เมื่อปิด Toggle:
+
+```text
+Toggle
+  ↓
+Disabled
+  ↓
+Thread ถูกหยุด
+```
+
+## Slider
+
+```lua
+Plugins:Slider(
+    Section,
+    {
+        "Distance",
+        "Set distance"
+    },
+    {
+        1,
+        100,
+        1
+    },
+    "Distance",
+    function(Value)
+        print(Value)
+    end
+)
+```
+
+รูปแบบ:
+
+```text
+Values = {
+    Minimum,
+    Maximum,
+    Rounding
+}
+```
+
+## Dropdown
+
+```lua
+Plugins:Dropdown(
+    Section,
+    "Select Mode",
+    {
+        "Mode 1",
+        "Mode 2",
+        "Mode 3"
+    },
+    "Mode",
+    function(Value)
+        print(Value)
+    end
+)
+```
+
+## Textbox
+
+```lua
+Plugins:Textbox(
+    Section,
+    {
+        "Username",
+        "Enter username"
+    },
+    "Username",
+    function(Value)
+        print(Value)
+    end
+)
+```
+
+## Notify
+
+```lua
+Plugins:Notify(
+    {
+        "Success",
+        "Action completed"
+    }
+)
+```
+
+กำหนด Duration:
+
+```lua
+Plugins:Notify(
+    {
+        "Success",
+        "Action completed"
+    },
+    5
+)
+```
+
+## Dialog
+
+```lua
+Plugins:Dialog(
+    {
+        "Confirmation",
+        "Are you sure?"
+    },
+    function()
+        print("Confirmed")
+    end
+)
+```
+
+---
+
+# ตัวอย่าง Framework แบบรวม
+
+```lua
+local Module, Settings = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/vita8it/Opengame/main/utils/package.luau"
+))()
+
+local Queue = Module.GoodQueue:Create()
+local Plugins = Module.Plugins
+
+Plugins:Window(
+    Queue,
+    {
+        "Example",
+        "Made by vita8it"
+    }
+)
+
+local Tab = Plugins:CreateTab({
+    "Main",
+    "Example"
+})
+
+Tab:Section("Farm", function(Section)
+
+    Queue:CreateOption("Collect Chest", function()
+        if IsChestAvailable() then
+            CollectChest()
+
+            return true
+        end
+    end)
+
+    Queue:CreateOption("Kill Enemy", function()
+        if IsEnemyAvailable() then
+            KillEnemy()
+
+            return true
+        end
+    end)
+
+    Queue:CreateOption("Move To Farm", function()
+        MoveToFarm()
+    end)
+
+    Queue:CreateOption("Auto Farm", function()
+        AutoFarm()
+    end, 0.1)
+
+    Plugins:Toggle(
+        Section,
+        {
+            "Auto Farm",
+            "Enable Auto Farm"
+        },
+        "Auto Farm",
+        function(Value)
+            print("Auto Farm:", Value)
+        end
+    )
+
+end)
+
+Queue:StartQueue()
+```
+
+ในตัวอย่างนี้:
+
+```text
+Collect Chest
+      ↓
+Kill Enemy
+      ↓
+Move To Farm
+```
+
+เป็น **Queue Layers**
+
+ส่วน:
+
+```text
+Auto Farm + 0.1
+```
+
+เป็น **Thread** และไม่ใช่ Queue Layer
 
 ---
 
 # หลักการสำคัญ
 
-เมื่อเขียนหรือแก้ไขโค้ด ให้ยึดหลักตามลำดับนี้:
+## 1. ใช้ PascalCase
 
-1. **ความถูกต้อง** — โค้ดต้องทำงานตามที่ต้องการ
-2. **ความอ่านง่าย** — คนอื่นควรเข้าใจโค้ดได้โดยไม่ต้องเดา
-3. **ความสม่ำเสมอ** — ใช้รูปแบบเดียวกันทั้งโปรเจกต์
-4. **การดูแลรักษา** — แก้ไขและต่อยอดได้ง่าย
-5. **ประสิทธิภาพ** — หลีกเลี่ยงการทำงานซ้ำหรือค้นหาสิ่งเดิมโดยไม่จำเป็น
-6. **ความเรียบง่าย** — อย่าเพิ่มความซับซ้อนหากไม่มีประโยชน์จริง
-
-> อย่า Optimize จนโค้ดอ่านไม่รู้เรื่อง
-> Optimization ที่ดีคือการลดงานที่ไม่จำเป็น โดยยังรักษาความชัดเจนของโค้ดไว้
-
----
-
-# 1. การตั้งชื่อ
-
-ให้ใช้ **PascalCase** เป็นมาตรฐานในการตั้งชื่อ
-
-### ตัวแปร
+ตัวแปร:
 
 ```lua
 local PlayerName = "Example"
-local Character = Player.Character
 local TargetPlayer = nil
 ```
 
-### ฟังก์ชัน
-
-ฟังก์ชันที่เป็นส่วนหนึ่งของ Module ให้ประกาศไว้ใน `Module` โดยตรง
+Function:
 
 ```lua
-function Module:GetCharacter()
-    return self.Character
+function GetTarget()
 end
 ```
 
-ไม่ควรสร้างฟังก์ชันของ Module เป็น `local function`
+Module:
 
 ```lua
--- ❌ ไม่ใช้
-local function GetCharacter()
-    return Character
-end
+local CombatManager = {}
 ```
 
 ---
 
-# 2. ฟังก์ชันต้องอยู่ภายใน Module
+# 2. Module Function ต้องใช้ Method
 
-หากฟังก์ชันเป็น Logic ของ Module ให้เก็บฟังก์ชันนั้นไว้ใน `Module`
-
-### ถูกต้อง
+Function ที่เป็น Logic ของ Module ต้องประกาศเป็น Method:
 
 ```lua
-function Module:GetCharacter()
-    return self.Character
-end
-
 function Module:GetTarget()
-    return self.Target
-end
-
-function Module:IsAlive()
-    return self.Humanoid and self.Humanoid.Health > 0
 end
 ```
 
-เรียกใช้งานผ่าน Module:
+เรียกใช้:
 
 ```lua
-Module:GetCharacter()
 Module:GetTarget()
-Module:IsAlive()
 ```
 
-### ไม่ควรใช้
+ไม่ควรเขียน:
 
 ```lua
-local function GetCharacter()
-    return Character
-end
-
 local function GetTarget()
-    return Target
 end
 ```
 
-เหตุผลคือ Logic ที่เกี่ยวข้องกันควรถูก **จัดกลุ่มและเป็นเจ้าของโดย Module เดียวกัน** เพื่อให้โครงสร้างโปรเจกต์ชัดเจนและค้นหาโค้ดได้ง่าย
+ถ้า Function นั้นเป็น Logic ของ Module
 
 ---
 
-# 3. ฟังก์ชันที่ Return Boolean ต้องขึ้นต้นด้วย `Is`
+# 3. Boolean Function ต้องขึ้นต้นด้วย Is
 
-หากฟังก์ชันมีหน้าที่ตรวจสอบเงื่อนไขและผลลัพธ์เป็น `true` หรือ `false` ให้ขึ้นต้นชื่อด้วย **`Is`**
-
-### ถูกต้อง
+Function ที่คืนค่า Boolean ต้องใช้ `Is`
 
 ```lua
-function Module:IsAlive()
-    return self.Humanoid and self.Humanoid.Health > 0
-end
-
-function Module:IsEnemy(Object)
-    return Object:IsDescendantOf(Enemies)
-end
-
-function Module:IsValidTarget(Target)
-    return Target and Target.Parent ~= nil
+function IsAlive(Character)
+    return Character ~= nil
 end
 ```
 
-ทำให้เวลาอ่านโค้ดสามารถเข้าใจได้ทันทีว่าเป็นการตรวจสอบ:
+ตัวอย่าง:
 
 ```lua
-if Module:IsAlive() then
-    Module:Attack()
-end
+IsAlive()
+IsEnemy()
+IsValidTarget()
+IsEnabled()
+IsAvailable()
 ```
-
-```lua
-if Module:IsValidTarget(Target) then
-    Module:Attack(Target)
-end
-```
-
-### ไม่ควรใช้
-
-```lua
-function Module:CheckAlive()
-    return true
-end
-
-function Module:CheckEnemy(Object)
-    return true
-end
-```
-
-`Check` ไม่สื่อความหมายชัดเจนเท่า `Is`
 
 ---
 
-# 4. แยกความหมายของ Function Prefix
-
-ชื่อฟังก์ชันควรบอก **เจตนาของฟังก์ชัน** อย่างชัดเจน
+# 4. Prefix ของ Function
 
 | Prefix   | ความหมาย                    |
 | -------- | --------------------------- |
-| `Is`     | ตรวจสอบและคืนค่า Boolean    |
+| `Is`     | ตรวจสอบ Boolean             |
 | `Get`    | ดึงค่าหรือ Object ที่มีอยู่ |
-| `Find`   | ค้นหาและคืนค่าผลลัพธ์       |
-| `Create` | สร้างสิ่งใหม่               |
+| `Find`   | ค้นหาและคืนผลลัพธ์          |
+| `Create` | สร้าง Object                |
 | `Set`    | กำหนดค่า                    |
-| `Update` | อัปเดตข้อมูลหรือ State      |
-| `Remove` | ลบ Object หรือข้อมูล        |
-| `Clear`  | ล้างข้อมูลหรือ State        |
-
-### ตัวอย่าง
-
-```lua
-function Module:IsAlive()
-    -- คืน true / false
-end
-
-function Module:GetCharacter()
-    -- คืน Character
-end
-
-function Module:FindTarget()
-    -- ค้นหา Target
-end
-
-function Module:CreateConnection()
-    -- สร้าง Connection
-end
-
-function Module:SetTarget(Target)
-    -- กำหนด Target
-end
-
-function Module:Update()
-    -- อัปเดตข้อมูล
-end
-```
-
-อย่าใช้ `Is` หากฟังก์ชันไม่ได้คืน Boolean
-
-```lua
--- ❌ ไม่ถูกต้อง
-function Module:IsTarget()
-    return Target
-end
-
--- ✅ ถูกต้อง
-function Module:GetTarget()
-    return Target
-end
-```
+| `Update` | อัปเดต State                |
+| `Remove` | ลบ Object                   |
+| `Clear`  | ล้างข้อมูล                  |
 
 ---
 
-# 5. การวน Loop
+# 5. ห้ามใช้ pairs / ipairs
 
-**ห้ามใช้ `pairs()` และ `ipairs()`**
+ใช้ Generalized Iteration
 
-ให้ใช้ Generalized Iteration ของ Luau โดยตรง
-
-### ถูกต้อง
-
-```lua
-for Index, Value in List do
-    print(Index, Value)
-end
-```
-
-```lua
-for PlayerIndex, Player in Players do
-    print(PlayerIndex, Player)
-end
-```
-
-### ไม่ใช้
+ไม่ใช้:
 
 ```lua
 for Index, Value in pairs(List) do
-    print(Index, Value)
 end
 ```
+
+ไม่ใช้:
 
 ```lua
 for Index, Value in ipairs(List) do
-    print(Index, Value)
+end
+```
+
+ให้ใช้:
+
+```lua
+for Index, Value in List do
 end
 ```
 
 ---
 
-# 6. การเข้าถึง Table
+# 6. เว้นวรรคใน Table Index
 
-เมื่อใช้ตัวแปรหรือ Object เป็น Index ให้เว้นช่องภายใน `[]`
-
-### ถูกต้อง
+ใช้:
 
 ```lua
-Table[ Object ] = 0
-
-local Value = Table[ Object ]
-local Data = Cache[ Player ]
-local Target = Targets[ Index ]
+Table[ Object ]
+Cache[ Player ]
+Settings[ Flag ]
 ```
 
-### ไม่ใช้
+ไม่ใช้:
 
 ```lua
-Table[Object] = 0
-
-local Value = Table[Object]
-local Data = Cache[Player]
+Table[Object]
+Cache[Player]
+Settings[Flag]
 ```
-
-รูปแบบนี้ต้องใช้ให้สม่ำเสมอทั้งโปรเจกต์
 
 ---
 
-# 7. การ Cache
+# 7. Cache
 
-เมื่อมีการค้นหา Object ที่มีโอกาสถูกเรียกใช้งานซ้ำ ให้พิจารณาใช้ Cache
-
-ค่าที่ถูก Cache ให้ใช้ชื่อว่า **`Cached`**
-
-หลักการคือ:
-
-```text
-ตรวจ Cache
-    ↓
-มีข้อมูล?
- ┌──┴──┐
-ใช่    ไม่ใช่
- ↓       ↓
-คืนค่า   ค้นหา
-          ↓
-        Cache
-          ↓
-        คืนค่า
-```
-
-### ตัวอย่าง
+ตัวแปร Cache ต้องใช้ชื่อ `Cached`
 
 ```lua
-function Module:GetChest()
-    local Cached = self.Cached
-
-    if Cached then
-        return Cached
-    end
-
-    for _, Object in workspace:GetChildren() do
-        if Object.Name == "Chest" then
-            self.Cached = Object
-
-            return Object
-        end
-    end
-end
+local CachedCharacter = nil
+local CachedTarget = nil
+local CachedHumanoid = nil
 ```
 
-### Pattern ที่ควรจำ
+ถ้าเป็น Table:
 
 ```lua
-local Cached = self.Cached
+local Cached = {}
+```
 
-if Cached then
-    return Cached
-end
+ตัวอย่าง:
 
--- ค้นหา Object
-
-self.Cached = Object
-
-return Object
+```lua
+Cached[ Player ] = Character
 ```
 
 ---
 
 # 8. Cache ไม่ใช่ Source of Truth
 
-อย่าเชื่อ Cache แบบไม่มีเงื่อนไข
+Cache มีไว้เพิ่มความเร็วเท่านั้น
 
-หาก Object สามารถถูกลบ, ย้าย, Destroy หรือเปลี่ยนแปลงได้ ต้องตรวจสอบความถูกต้องก่อนนำ Cache กลับมาใช้
-
-### ตัวอย่าง
+ต้อง Validate Object ก่อนนำกลับมาใช้
 
 ```lua
-function Module:GetTarget()
-    local Cached = self.Cached
+local Character = Cached[ Player ]
 
-    if Cached and Cached.Parent then
-        return Cached
-    end
+if not Character or not Character.Parent then
+    Cached[ Player ] = nil
 
-    self.Cached = nil
-
-    -- ค้นหา Target ใหม่
-
-    if Target then
-        self.Cached = Target
-    end
-
-    return Target
+    Character = Player.Character
 end
-```
-
-หลักสำคัญ:
-
-> **Cache เป็นเพียง Optimization ไม่ใช่ Source of Truth**
-
-หาก Cache ใช้งานไม่ได้ ให้ล้าง Cache และค้นหาใหม่
-
----
-
-# 9. ใช้ Early Return
-
-เมื่อเงื่อนไขไม่ผ่าน ให้ Return ทันทีเพื่อลด Nested Code
-
-### ควรใช้
-
-```lua
-function Module:IsValidTarget(Target)
-    if not Target then
-        return false
-    end
-
-    if not Target.Parent then
-        return false
-    end
-
-    return true
-end
-```
-
-แทนที่จะเขียน Nested หลายชั้น:
-
-```lua
-function Module:IsValidTarget(Target)
-    if Target then
-        if Target.Parent then
-            return true
-        end
-    end
-
-    return false
-end
-```
-
-Early Return ช่วยให้ Flow ของ Function อ่านจากบนลงล่างได้ง่ายกว่า
-
----
-
-# 10. หลีกเลี่ยงการทำงานซ้ำ
-
-หากสามารถเก็บผลลัพธ์ไว้ใช้ซ้ำได้ ให้เก็บไว้แทนการเรียก API เดิมหลายครั้ง
-
-### ไม่ควร
-
-```lua
-if Player.Character then
-    local Humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
-
-    if Player.Character:FindFirstChild("HumanoidRootPart") then
-        -- ...
-    end
-end
-```
-
-### ควร
-
-```lua
-local Character = Player.Character
 
 if not Character then
-    return
-end
-
-local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-
-if not Humanoid or not HumanoidRootPart then
     return
 end
 ```
 
 หลักการ:
 
-> **ค้นหาหนึ่งครั้ง เก็บไว้ใช้หลายครั้ง**
+```text
+Cache
+  ↓
+Validate
+  ↓
+Valid?
+ ├─ Yes → ใช้ต่อ
+ └─ No  → Clear → Find ใหม่
+```
 
 ---
 
-# 11. Function ควรมีหน้าที่ชัดเจน
+# 9. Early Return
 
-หนึ่ง Function ควรมี **ความรับผิดชอบหลักเพียงอย่างเดียว**
+ควรใช้ Early Return เพื่อลด Nested Condition
 
-### ควร
+ไม่ควร:
 
 ```lua
-function Module:IsAlive()
-    -- ตรวจสอบสถานะ
-end
-
-function Module:FindTarget()
-    -- ค้นหา Target
-end
-
-function Module:Attack(Target)
-    -- โจมตี Target
+if Character then
+    if Humanoid then
+        if Humanoid.Health > 0 then
+            Attack()
+        end
+    end
 end
 ```
 
-แทนการสร้าง Function ขนาดใหญ่ที่ทำทุกอย่าง:
+ควร:
 
 ```lua
-function Module:DoEverything()
-    -- Find Target
-    -- Validate Target
-    -- Update UI
-    -- Attack
-    -- Handle Cooldown
-    -- Move
+if not Character then
+    return
 end
-```
 
-การแยกหน้าที่ทำให้ Debug และแก้ไขในอนาคตง่ายขึ้น
+if not Humanoid then
+    return
+end
+
+if Humanoid.Health <= 0 then
+    return
+end
+
+Attack()
+```
 
 ---
 
-# 12. ใช้ `self` สำหรับ State ของ Module
+# 10. หลีกเลี่ยงงานซ้ำ
 
-หากข้อมูลเป็น State ที่เป็นของ Module ให้เข้าถึงผ่าน `self`
+ไม่ควรเรียก API เดิมหลายครั้งโดยไม่จำเป็น
 
-### ควร
-
-```lua
-function Module:GetCharacter()
-    return self.Character
-end
-
-function Module:IsAlive()
-    local Humanoid = self.Humanoid
-
-    return Humanoid and Humanoid.Health > 0
-end
-```
-
-วิธีนี้ทำให้ข้อมูลของ Module ถูกจัดการอย่างเป็นระบบและลดการพึ่งพา Global State โดยไม่จำเป็น
-
----
-
-# 13. อย่าเขียนโค้ดให้สั้นจนอ่านไม่รู้เรื่อง
-
-จำนวนบรรทัดที่น้อยลง **ไม่ได้หมายความว่าโค้ดดีขึ้นเสมอไป**
-
-### อ่านง่าย
+ควร:
 
 ```lua
 local Character = Player.Character
@@ -523,91 +948,267 @@ if not Character then
     return
 end
 
-local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+local Humanoid = Character:FindFirstChild("Humanoid")
+local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+```
 
-if not Humanoid then
+หลักการ:
+
+```text
+Get ครั้งเดียว
+    ↓
+เก็บไว้ใน Variable
+    ↓
+ใช้ซ้ำ
+```
+
+---
+
+# 11. Function ต้องมี Responsibility เดียว
+
+หนึ่ง Function ควรมีหน้าที่หลักเพียงอย่างเดียว
+
+ควรแยก:
+
+```lua
+function FindTarget()
+end
+
+function TeleportToTarget()
+end
+
+function AttackTarget()
+end
+
+function CollectItem()
+end
+```
+
+แล้วให้ Function หลักเป็นตัวจัดลำดับ:
+
+```lua
+function UpdateFarm()
+    local Target = FindTarget()
+
+    if not Target then
+        return
+    end
+
+    TeleportToTarget(Target)
+    AttackTarget(Target)
+end
+```
+
+---
+
+# 12. ใช้ self สำหรับ Module State
+
+ถ้า State เป็นของ Module ให้ใช้ `self`
+
+```lua
+local Manager = {}
+
+function Manager:Create()
+    self.Target = nil
+end
+
+function Manager:SetTarget(Target)
+    self.Target = Target
+end
+
+function Manager:GetTarget()
+    return self.Target
+end
+
+return Manager
+```
+
+---
+
+# 13. อ่านง่ายสำคัญกว่าสั้น
+
+อย่าทำ Code ให้สั้นจนอ่านยาก
+
+ควร:
+
+```lua
+local Character = Player.Character
+
+if not Character then
+    return
+end
+
+local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+
+if not HumanoidRootPart then
     return
 end
 ```
 
-ดีกว่าการบีบ Logic หลายอย่างไว้ใน Expression เดียวจน Debug ยาก
-
-> **ให้ Optimize งานที่โปรแกรมต้องทำ ไม่ใช่ Optimize จำนวนบรรทัด**
-
 ---
 
-# 14. รักษา Convention เดียวกันทั้งโปรเจกต์
+# 14. Consistency
 
-หากกำหนดรูปแบบใดไว้แล้ว ให้ใช้รูปแบบนั้นอย่างสม่ำเสมอ
-
-### ควร
+Code ใน Project เดียวกันต้องใช้รูปแบบเดียวกัน
 
 ```lua
-Module:IsAlive()
-Module:IsValidTarget(Target)
-Module:GetTarget()
-Module:GetCharacter()
-Module:FindEnemy()
+local Player = Players.LocalPlayer
+local Character = Player.Character
+local Humanoid = Character:FindFirstChild("Humanoid")
 ```
 
-### ไม่ควรปะปน
+ไม่ควรสลับเป็น:
 
 ```lua
-Module:IsAlive()
-Module:checkTarget()
-getCharacter()
-Check_Enemy()
+local player = ...
+local Char = ...
+local humanoid = ...
 ```
 
-เป้าหมายคือทำให้ Developer สามารถคาดเดาชื่อ Function ได้โดยไม่ต้องเปิดดู Implementation
+---
+
+# 15. การแก้ไข Code เดิม
+
+เมื่อแก้ Code ที่มีอยู่แล้ว:
+
+* Preserve Logic เดิม
+* Preserve Architecture เดิม
+* แก้เฉพาะส่วนที่จำเป็น
+* ไม่สร้างระบบใหม่โดยไม่ได้ขอ
+* ไม่เปลี่ยนชื่อสิ่งต่าง ๆ โดยไม่มีเหตุผล
+* ไม่ Refactor ขนาดใหญ่ถ้าไม่ได้ร้องขอ
 
 ---
 
-# 15. เมื่อแก้ไขโค้ดเดิม
+# 16. Queue Layer ต้องเรียงตาม Priority
 
-เมื่อได้รับโค้ดที่มีอยู่แล้ว:
+สำหรับระบบ Farm ให้เรียง Layer จาก **สำคัญที่สุด → สำคัญน้อยที่สุด**
 
-1. รักษา Logic เดิมที่ยังถูกต้อง
-2. แก้เฉพาะส่วนที่จำเป็น
-3. ปรับ Naming ให้ตรงกับ Convention
-4. ลดโค้ดซ้ำ
-5. เพิ่ม Cache เมื่อเหมาะสม
-6. แยก Function หาก Function ใหญ่เกินไป
-7. หลีกเลี่ยงการเปลี่ยน Architecture โดยไม่มีเหตุผล
-8. อย่าเพิ่มระบบที่ไม่ได้ร้องขอ
-9. หากมีหลายวิธี ให้เลือกวิธีที่ **อ่านง่ายและมีประสิทธิภาพที่สุด**
-10. ผลลัพธ์สุดท้ายต้องยังคงพฤติกรรมเดิม เว้นแต่ผู้ใช้ต้องการเปลี่ยนพฤติกรรม
+```lua
+Queue:CreateOption("Emergency", function()
+    if IsEmergency() then
+        HandleEmergency()
+
+        return true
+    end
+end)
+
+Queue:CreateOption("Collect", function()
+    if IsCollectable() then
+        Collect()
+
+        return true
+    end
+end)
+
+Queue:CreateOption("Farm", function()
+    Farm()
+end)
+```
+
+ลำดับ:
+
+```text
+Emergency
+    ↓
+Collect
+    ↓
+Farm
+```
+
+ถ้า `Emergency` ทำงานสำเร็จและ `return true`:
+
+```text
+Emergency
+   ↓
+return true
+   ↓
+STOP
+```
+
+จะไม่ลงไปทำ `Collect` หรือ `Farm` ในรอบนั้น
 
 ---
 
-# สรุป Convention
+# 17. Queue ไม่ควรใช้ Interval
 
-| หัวข้อ              | มาตรฐาน                            |
-| ------------------- | ---------------------------------- |
-| ภาษา                | Luau                               |
-| Platform            | Roblox                             |
-| Variable            | `PascalCase`                       |
-| Function            | `Module:PascalCase()`              |
-| Boolean Function    | `Module:IsSomething()`             |
-| ดึงข้อมูล           | `GetSomething()`                   |
-| ค้นหา               | `FindSomething()`                  |
-| สร้าง               | `CreateSomething()`                |
-| ตั้งค่า             | `SetSomething()`                   |
-| วน Loop             | `for Index, Value in List do`      |
-| `pairs()`           | ❌ ห้ามใช้                          |
-| `ipairs()`          | ❌ ห้ามใช้                          |
-| Table Index         | `Table[ Object ]`                  |
-| Cache               | `Cached`                           |
-| Function ของ Module | เก็บใน `Module`                    |
-| Function Boolean    | ขึ้นต้นด้วย `Is`                   |
-| Control Flow        | Prefer Early Return                |
-| Optimization        | ลดงานซ้ำโดยไม่ลดความอ่านง่าย       |
-| Function Design     | หนึ่ง Function มีหน้าที่หลักชัดเจน |
+ถ้าต้องการสร้าง Layer:
+
+```lua
+Queue:CreateOption("Farm", function()
+    Farm()
+end)
+```
+
+ไม่ใช่:
+
+```lua
+Queue:CreateOption("Farm", function()
+    Farm()
+end, 0.1)
+```
+
+เพราะแบบหลังเป็น Thread
+
+```text
+ไม่มี Interval
+    ↓
+Queue Layer
+
+มี Interval
+    ↓
+Thread
+```
 
 ---
 
-# หลักการสุดท้าย
+# 18. Summary Convention
 
-> **เขียนโค้ดให้คนอ่านเข้าใจได้ก่อน แล้วค่อยทำให้เครื่องทำงานได้เร็วขึ้น**
->
-> โค้ดที่ดีไม่ใช่โค้ดที่สั้นที่สุด แต่คือโค้ดที่ **ชัดเจน, คาดเดาได้, มีโครงสร้าง, ไม่ทำงานซ้ำโดยไม่จำเป็น และสามารถแก้ไขต่อได้ง่าย**
+เมื่อสรุป Code หรืออธิบายระบบ ให้เน้น:
+
+1. หน้าที่ของระบบ
+2. ลำดับการทำงาน
+3. Input / Output
+4. เงื่อนไขสำคัญ
+5. จุดที่ต้องระวัง
+
+ตัวอย่าง:
+
+```text
+GoodQueue
+
+1. CreateOption ไม่มี Interval = Queue Layer
+2. Layer ทำงานจากบนลงล่าง
+3. Layer ที่อยู่ด้านบนมี Priority สูงกว่า
+4. return true = หยุด Queue ที่ Layer ปัจจุบัน
+5. CreateOption ที่มี Interval = Thread
+6. Thread ทำงานตาม Interval และไม่ใช่ Queue Layer
+```
+
+---
+
+# Final Principle
+
+Code ที่ดีใน Project นี้ต้อง:
+
+* อ่านง่าย
+* Consistent
+* ใช้ Naming ที่ชัดเจน
+* ใช้ PascalCase
+* ใช้ `Is` สำหรับ Boolean
+* ใช้ Prefix ให้ตรงกับหน้าที่
+* ไม่ใช้ `pairs()` / `ipairs()`
+* เว้นวรรคใน Table Index
+* ใช้ Cache อย่างถูกต้อง
+* Validate Cache ก่อนใช้
+* ใช้ Early Return
+* หลีกเลี่ยงงานซ้ำ
+* แยก Responsibility ของ Function
+* ใช้ `self` สำหรับ Module State
+* Preserve Architecture เดิม
+* ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
+* ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
+
+สำหรับระบบ Farm:
+
+> **Queue คือการทำงานแบบ Layer จากด้านบนลงล่าง โดย Layer ที่ `return true` จะเป็น Layer ที่จัดการงานในรอบนั้นและหยุด Queue ทันที ส่วน `CreateOption` ที่มี Interval จะเป็น Thread ไม่ใช่ Queue Layer**
