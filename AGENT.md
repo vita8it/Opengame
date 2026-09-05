@@ -21,7 +21,7 @@
 
 เมื่อจะสร้างฟังก์ชันให้ใช้รูปแบบ `Module:FunctionName`
 
-เมื่อจะ Connect อะไรก็ตามให้ใช้:
+เมื่อจะ Connect อะไรก็ตามให้ใช้ Connect จาก Framework:
 
 ```lua
 Connect(Signal, Action)
