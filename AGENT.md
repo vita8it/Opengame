@@ -1241,6 +1241,177 @@ require() จาก Variable แทน
 
 ---
 
+## 20. ห้ามใช้ local function นอก CreateModule
+
+`local function` ทุกตัวต้องอยู่ภายใน `CreateModule` เท่านั้น
+
+ไม่ควร:
+
+```lua
+local function GetTarget()
+    return nil
+end
+
+Module:CreateModule("Combat", function(Module)
+    local Combat = {}
+    return Combat
+end)
+```
+
+ควร:
+
+```lua
+Module:CreateModule("Combat", function(Module)
+    local Combat = {}
+
+    local function GetTarget()
+        return nil
+    end
+
+    function Combat:Attack()
+        local Target = GetTarget()
+    end
+
+    return Combat
+end)
+```
+
+หลักการ:
+
+```
+local function
+    ↓
+ต้องอยู่ใน CreateModule เสมอ
+    ↓
+ถ้าเป็น Logic ของ Module → ใช้ Method แทน
+```
+
+---
+
+## 21. เรียก _ENV ทุกครั้งที่สร้างสคริปต์
+
+ทุกสคริปต์ต้องเริ่มต้นด้วย:
+
+```lua
+local _ENV = (getgenv or getrenv or getfenv)()
+```
+
+บรรทัดนี้ต้องอยู่บนสุดเสมอ ไม่มีข้อยกเว้น
+
+---
+
+## 22. ห้ามเขียน Comment
+
+ไม่ควร:
+
+```lua
+-- Get the player character
+local Character = Player.Character
+
+-- Check if humanoid exists
+local Humanoid = Character:FindFirstChild("Humanoid")
+```
+
+ควร:
+
+```lua
+local Character = Player.Character
+local Humanoid = Character:FindFirstChild("Humanoid")
+```
+
+ให้ใช้ Naming ที่ชัดเจนแทน Comment
+
+---
+
+## 23. โครงสร้างการสร้าง UI
+
+ทุกสคริปต์ที่สร้าง UI ต้องทำตามลำดับนี้เสมอ
+
+**ขั้นที่ 1 — ล้าง UI เดิม:**
+
+```lua
+local Folder = gethui and gethui()
+
+for Index, Value in Folder:GetChildren() do
+    if Value.Name:find("Next.js") then
+        Value:Destroy()
+    end
+end
+```
+
+**ขั้นที่ 2 — สร้าง Window:**
+
+```lua
+Window:Community()
+```
+
+**ขั้นที่ 3 — สร้าง Tab และ Section ด้วย `do ... end`:**
+
+```lua
+local Tab = Plugins:CreateTab({ "Main", "Description", IconId }) do
+    Tab:Section("Section Name", function(Section)
+
+    end)
+end
+```
+
+**ขั้นที่ 4 — ปิดท้ายด้วย Managers:**
+
+```lua
+Window:Managers()
+```
+
+ลำดับรวม:
+
+```
+ล้าง UI เดิม
+    ↓
+Window:Community()
+    ↓
+CreateTab + Section
+    ↓
+Window:Managers()
+```
+
+---
+
+## 24. SetDefault ต้องอยู่บนสุดของ Section
+
+`Plugins:SetDefault()` ของ Toggle, Dropdown, Slider หรือ Textbox ต้องประกาศบนสุดใน Section ก่อนสร้าง UI Element
+
+ไม่ควร:
+
+```lua
+Tab:Section("Settings", function(Section)
+    Plugins:Toggle(Section, { "Auto Farm", "Enable" }, "AutoFarm", function(Value) end)
+    Plugins:SetDefault("AutoFarm", false)
+end)
+```
+
+ควร:
+
+```lua
+Tab:Section("Settings", function(Section)
+    Plugins:SetDefault("AutoFarm", false)
+    Plugins:SetDefault("Mode", "Normal")
+
+    Plugins:Toggle(Section, { "Auto Farm", "Enable" }, "AutoFarm", function(Value) end)
+    Plugins:Dropdown(Section, "Select Mode", { "Normal", "Hard" }, "Mode", function(Value) end)
+end)
+```
+
+หลักการ:
+
+```
+Section
+  ↓
+SetDefault ทั้งหมดก่อน
+  ↓
+UI Elements
+```
+
+---
+
 # Final Principle
 
 Code ที่ดีใน Project นี้ต้อง:
@@ -1263,6 +1434,11 @@ Code ที่ดีใน Project นี้ต้อง:
 - ไม่เพิ่มระบบที่ไม่ได้ร้องขอ
 - ให้ความสำคัญกับ Readability มากกว่าการเขียนให้สั้น
 - ลด Path ซ้ำใน `require()` ด้วย `WaitForChild()`
+- ห้ามใช้ `local function` นอก `CreateModule`
+- เรียก `_ENV` บนสุดทุกสคริปต์
+- ห้ามเขียน Comment
+- ทำตามโครงสร้าง UI ตามลำดับ
+- `SetDefault` ต้องอยู่บนสุดของ Section เสมอ
 
 สำหรับระบบ Farm:
 
